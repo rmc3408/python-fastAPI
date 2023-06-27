@@ -46,7 +46,7 @@ async def create_book(item: Book):
     #     'category': item.category
     # }
     newBook = item.dict()
-    newBook['id'] = uuid.uuid4()
+    newBook['id'] = str(uuid.uuid4())
     BOOKS.append(newBook)
     return {'msg': newBook }
 
@@ -61,7 +61,7 @@ async def update_book(id: str, item: Book):
     for key in modifiedData.keys():
         if modifiedData[key] == None:
             continue
-        data.update({ key: modifiedData[key] })
+        data.update({ **data, key: modifiedData[key] })
 
     BOOKS[index] = data
     return { 'msg': data }
@@ -75,11 +75,11 @@ async def read_all_books(skip_book: str | None = None):
     return newBooks
 
 
-@app.get("/books/{id}")
+@app.get("/{id}")
 async def read_one_book(id: str):
     filtered = filter(lambda x: x['id'] == id, BOOKS)
     result = list(filtered)[0]
-    return {"item_id": result['id'], "item_title": result['title']}
+    return {"item_id": result['id'], "item": result}
 
 
 @app.delete('/{id}')
