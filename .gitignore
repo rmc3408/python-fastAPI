@@ -2,9 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+*/Scripts
+Scripts/
 # C extensions
 *.so
+pyvenv.cfg
 
 # Distribution / packaging
 .Python
