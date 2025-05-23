@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .router import create, read, update, delete
+from .controller import create, read, update, delete
 
 app = FastAPI()
 
