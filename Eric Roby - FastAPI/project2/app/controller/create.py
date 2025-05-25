@@ -1,28 +1,20 @@
-from fastapi import APIRouter, Body
-from ..utils.mock import BOOKS
-import uuid
-from pydantic import BaseModel
+from fastapi import APIRouter, status
+from ..models.book import BOOKS, Book, BookRequest, BookResponse
+from ..errors.book import BookException
 
 router = APIRouter()
 
-class Book(BaseModel):
-    title: str | None
-    author: str | None
-    category: str
 
-# @router.post('/')
-# async def create_book(item: Book):
-#     newBook = { 
-#         'id': uuid.uuid4(), 
-#         'title': item.title, 
-#         'author': item.author, 
-#         'category': item.category
-#     }
-#     return {'msg': 'ok'}
+@router.post("", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
+async def create_book(bodyitem: BookRequest):  # using Pydantic model for validation
+    payload = bodyitem.model_dump()
+    
+    if payload['title'] == "yolo":
+        raise BookException(detail="You cannot create a book with the name 'yolo'")
+    payload['id'] = makeNewId()
+    convertedBook = Book(**payload)
+    BOOKS.append(convertedBook)
+    return convertedBook
 
-@router.post('/')
-async def create_book(item: Book = Body()):
-    newBook = item.dict()
-    newBook['id'] = str(uuid.uuid4())
-    BOOKS.append(newBook)
-    return {'item': newBook }
+def makeNewId():
+    return 1 if len(BOOKS) == 0 else BOOKS[-1].id + 1

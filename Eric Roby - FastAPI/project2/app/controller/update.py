@@ -1,21 +1,25 @@
-from fastapi import APIRouter, Body
-from ..utils.mock import BOOKS
-from ..utils.helpers import find
+from typing import Optional
+from app.models.book import BOOKS, BookUpdateRequest, Book, BookUpdateResponse
+from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.put('/{id}')
-async def update_book(id: str, update_book=Body()):
-    
-    [index, data] = find('id', id, BOOKS)
-    print(f'index: {data}')
-    if index == -1 or data == None:
-        return { 'msg': 'Book not found' }
+@router.put('/{id}', response_model=BookUpdateResponse, tags=['books/update'])
+async def update_book(id: str, update_book: BookUpdateRequest):
+  num_book = -1
+  found_book: Optional[Book] = None
+  for i in range(len(BOOKS)):
+    if BOOKS[i].id == int(id):
+      num_book = i
+      found_book = BOOKS[i]
 
-    for key in update_book.keys():
-        if update_book[key] == None:
-            continue
-        data.update({ **data, key: update_book[key] })
+  if num_book is not -1 and found_book is not None:
+    for key in found_book.__dict__.keys():
+      if key == 'id':
+        continue
+      value = getattr(update_book, key)
+      if value is not None:
+        setattr(found_book, key, value)
+    BOOKS[num_book] = found_book
 
-    BOOKS[index] = data
-    return { 'msg': data }
+  return found_book
