@@ -1,5 +1,5 @@
 from typing import Optional
-from app.models.book import BOOKS, BookUpdateRequest, Book, BookUpdateResponse
+from ..models.book import BOOKS, BookUpdateRequest, Book, BookUpdateResponse
 from fastapi import APIRouter
 
 router = APIRouter()

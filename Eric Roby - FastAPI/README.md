@@ -3,7 +3,7 @@
 1. Install, create and activate VENV environment  
 Instalation `python -m pip install virtualenv`  
 Creating an environment `python -m virtualenv {directoryName}`  
-Activating the environment `./project2/Scripts/activate.ps1`
+Activating the environment `./.venv/Scripts/activate.ps1`
 Deactivating the environment `deactivate`
   
 2. install packages  

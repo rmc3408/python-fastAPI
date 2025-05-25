@@ -4,7 +4,7 @@ from ..utils.mock import BOOKS
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 async def read_all_books(skip_book: str | None = None):
     newBooks = BOOKS.copy()
     if skip_book is not None:

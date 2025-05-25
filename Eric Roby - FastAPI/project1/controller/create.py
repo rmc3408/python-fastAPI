@@ -20,7 +20,7 @@ class Book(BaseModel):
 #     }
 #     return {'msg': 'ok'}
 
-@router.post('/')
+@router.post("")
 async def create_book(item: Book = Body()):
     newBook = item.dict()
     newBook['id'] = str(uuid.uuid4())

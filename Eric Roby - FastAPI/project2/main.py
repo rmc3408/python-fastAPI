@@ -1,4 +1,4 @@
-from app.errors.book import BookException
+from .errors.book import BookException
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from .controller import create, read, update, delete
