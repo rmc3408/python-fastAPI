@@ -9,7 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
-    tasks: Mapped[List["Task"]] = relationship('Task', back_populates="user")
+    tasks: Mapped[List["Task"]] = relationship(back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username})>"
@@ -23,8 +23,24 @@ class Task(Base):
     description = Column(String, nullable=True)
     priority = Column(Integer, default=1)
     completed = Column(Boolean, default=False)
-    user_id = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    user: Mapped["User"] = relationship('User', back_populates="tasks")
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user: Mapped["User"] = relationship(back_populates="tasks")
+    comment: Mapped["Comment"] = relationship(back_populates="task", cascade="all, delete-orphan")
+
 
     def __repr__(self):
-        return f"<Task(id={self.id}, title={self.title}, completed={self.completed})>"
+        return f"<Task(id={self.id}, title={self.title}, completed={self.completed}, comment={self.comment})>"
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    content = Column(String)
+    author = Column(String, nullable=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), nullable=False)
+    task: Mapped["Task"] = relationship(back_populates="comment")
+
+    def __repr__(self):
+        return f"<Comment(id={self.id}, content={self.content}, author={self.author})>"
+    
