@@ -2,13 +2,25 @@ from typing import List
 from ..database import Base
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
+from enum import Enum
+from sqlalchemy import Enum as SQLEnum
+
+
+class RoleUser(Enum):
+    ADMIN = "admin"
+    USER = "user"
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, unique=True)
+    hashed_password = Column(String)
+    first_name = Column(String)
+    last_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    role = Column(SQLEnum(RoleUser), default=RoleUser.USER)
     tasks: Mapped[List["Task"]] = relationship(back_populates="user")
 
     def __repr__(self):
@@ -26,7 +38,6 @@ class Task(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     user: Mapped["User"] = relationship(back_populates="tasks")
     comment: Mapped["Comment"] = relationship(back_populates="task", cascade="all, delete-orphan")
-
 
     def __repr__(self):
         return f"<Task(id={self.id}, title={self.title}, completed={self.completed}, comment={self.comment})>"
