@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
-from pydantic import Field
-from sqlalchemy.orm import joinedload, Session
+from sqlalchemy.orm import Session
 from typing import Annotated
-from ..models.task import RoleUser, User, Task, Comment
+from ..models.entity import RoleUser, User, Task, Comment
 from ..database import session
 
 

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from ..database import session
 from sqlalchemy.orm import Session, joinedload
 from typing import Annotated, Optional
-from ..models.task import RoleUser, User
+from ..models.entity import RoleUser, User
 from pydantic import BaseModel, Field, EmailStr
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -36,6 +36,7 @@ class CreateUserRequest(BaseModel):
     last_name: str = Field(min_length=2, max_length=30)
     role: RoleUser
 
+# Pydantic models
 class SignInRequest(BaseModel):
     username: str 
     password: str
@@ -92,7 +93,9 @@ def create_access_token(data: User) -> str:
     encoded_jwt = jwt.encode(to_encode, 'ABCD', algorithm="HS256")
     return encoded_jwt
 
+
 ## AUTH ROUTES ###
+
 @router.get("/whoami", response_model=CurrentUser)
 async def get_current_user(request: Request, current_user: Annotated[BearerData, Depends(validate_user)]): 
   cookie = request.cookies.get('user')
@@ -114,6 +117,7 @@ def signin(db: DB_Dependency, response: Response, form_data: Annotated[OAuth2Pas
     response.set_cookie(key="user", value=form_data.username, httponly=True)
 
     return Token(access_token=access_token, token_type="bearer")
+
 
 ### USER ROUTES ###
 

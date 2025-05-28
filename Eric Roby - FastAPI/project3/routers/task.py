@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, Session
 from typing import Optional, Annotated
-from ..models.task import Task
+from ..models.entity import Task
 from ..database import session
 from ..routers.auth import get_current_user, CurrentUser
 
@@ -18,8 +18,9 @@ def get_db():
         db.close()
 
 DB_Dependency = Annotated[Session, Depends(get_db)]
-User_Dependency = Annotated[CurrentUser, Depends(get_current_user)]  # Placeholder for user ID dependency
+User_Dependency = Annotated[CurrentUser, Depends(get_current_user)]
 
+# Pydantic models
 class TaskCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=50)
     description: Optional[str] = Field(default=None, max_length=50)
@@ -30,7 +31,6 @@ class TaskCreateResponse(TaskCreateRequest):
     id: int
     completed: bool
 
-
 class TaskUpdateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=50)
     description: Optional[str] = Field(default=None, max_length=50)
@@ -39,8 +39,12 @@ class TaskUpdateRequest(BaseModel):
     completed: bool
 
 
+## TASKS ROUTES
+
 @router.post("/tasks", response_model=TaskCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(user: User_Dependency, body: TaskCreateRequest, db: DB_Dependency):
+    if user is None:
+        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
     
     raw_data = body.model_dump()
     from_bearer = user.model_dump().get('from_bearer')
@@ -87,16 +91,6 @@ def delete_task(db: DB_Dependency, task_id: int = Path(ge=1)):
     db.commit()
     return {"message": "Task deleted successfully"}
 
-
-@router.get("/tasks/{task_id}", status_code=status.HTTP_200_OK)
-def read_one_tasks(db: DB_Dependency, task_id: int = Path(gt=0)):
-  result = db.query(Task).filter(Task.id == task_id).options(joinedload(Task.comment)).first()
-  if result is None:
-      return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-  print('ONE TASK')
-  return result
-
-
 @router.get("/tasks")
 def read_all_tasks(db: DB_Dependency):
   # result = db.query(Task).all()
@@ -104,3 +98,37 @@ def read_all_tasks(db: DB_Dependency):
   result = db.execute(query).scalars().all()
   print('ALL TASK')
   return result
+
+@router.get("/tasks/user")
+def read_all_tasks_by_user(user: User_Dependency, db: DB_Dependency):
+  if user is None:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
+
+  user_id = user.model_dump().get('from_bearer', {}).get('id')
+  
+  query = select(Task).options(joinedload(Task.comment)).filter(Task.user_id == user_id)
+  result = db.execute(query).scalars().all()
+  print('ALL TASK BY USER')
+  return result
+
+@router.get("/tasks/{task_id}", status_code=status.HTTP_200_OK)
+def read_one_tasks(user: User_Dependency, db: DB_Dependency, task_id: int = Path(gt=0)):
+  if user is None:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
+
+  user_id = user.model_dump().get('from_bearer', {}).get('id')
+
+  result = db.query(Task)\
+            .filter(Task.id == task_id)\
+            .options(joinedload(Task.comment))\
+            .filter(Task.user_id == user_id)\
+            .first()
+  
+  if result is None:
+      return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+  print('ONE TASK')
+  return result
+
+
+
+
