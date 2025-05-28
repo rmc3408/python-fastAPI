@@ -25,6 +25,9 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username})>"
+    
+    def to_dict(self):
+        return {field.name:getattr(self, field.name) for field in self.__table__.c}
 
 
 class Task(Base):

@@ -1,18 +1,22 @@
-from fastapi import APIRouter, Body, Depends, Request, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
+import jwt
+from jwt.exceptions import InvalidTokenError
 from sqlalchemy import select
 from ..database import session
 from sqlalchemy.orm import Session, joinedload
-from typing import Annotated
+from typing import Annotated, Optional
 from ..models.task import RoleUser, User
 from pydantic import BaseModel, Field, EmailStr
 from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta, timezone
 
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Password hashing context
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/whoami")
 
 # Dependency to get the database session
 def get_db():
@@ -32,14 +36,70 @@ class CreateUserRequest(BaseModel):
     last_name: str = Field(min_length=2, max_length=30)
     role: RoleUser
 
+class SignInRequest(BaseModel):
+    username: str 
+    password: str
 
-@router.get("/current")
-async def getUser(request: Request):
-  cok = request.cookies.get('user')
-  if not cok:
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+credentials_exception = HTTPException(
+  status_code=status.HTTP_401_UNAUTHORIZED,
+  detail="Could not validate credentials",
+  headers={"WWW-Authenticate": "Bearer"},
+)
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]) -> str:
+    try:
+        payload = jwt.decode(token, 'ABCD', algorithms=["HS256"])
+        if payload is None:
+            raise credentials_exception
+        return payload
+    except InvalidTokenError:
+        raise credentials_exception
+
+def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
+    # Validate a existing user by username
+    statement = select(User).where(User.username == username)
+    user = db.execute(statement).scalars().first()
+    if not user:
+        return None
+    if not bcrypt_context.verify(password, str(user.hashed_password)):
+        return None
+    return user
+
+def create_access_token(data: User) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    user_dict = data.to_dict()
+    to_encode = {"exp": expire, "sub": user_dict['username'], "role": user_dict['role'].value}
+    encoded_jwt = jwt.encode(to_encode, 'ABCD', algorithm="HS256")
+    return encoded_jwt
+
+## AUTH ROUTES ###
+@router.get("/whoami")
+async def read_users_me(request: Request, current_user: Annotated[str, Depends(get_current_user)]): 
+  cookie = request.cookies.get('user')
+  if not cookie:
       return {"message": "No user cookie found"}
-  return {"message": cok}
+  return { 'from_cookie': cookie, 'from_bearer': current_user }
 
+@router.post("/signin", response_model=Token)
+def signin(db: DB_Dependency, response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    # Check if the password is correct using bcrypt
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if user is None:
+        raise credentials_exception
+    
+    #set JWT token
+    access_token = create_access_token(data=user)
+
+    # Set the user cookie Authenticated
+    response.set_cookie(key="user", value=form_data.username, httponly=True)
+
+    return Token(access_token=access_token, token_type="bearer")
+
+### USER ROUTES ###
 
 @router.get("/users")
 def read_all_users(db: DB_Dependency):
@@ -65,28 +125,3 @@ def create_users(body: CreateUserRequest, db: DB_Dependency):
   if result is None:
       return {"message": "User not created"}
   return result
-
-
-@router.post("/signin")
-def signin(db: DB_Dependency, response: Response, raw_data = Body()):
-    
-    # Validate a existing user by username
-    statement = select(User).where(User.username == raw_data['username'])
-    user = db.execute(statement).scalars().first()
-    if user is None:
-      return {"message": "Invalid username or password"}
-    
-
-    # Check if the password is correct using bcrypt
-    if user.hashed_password is str:
-      print(raw_data['password'], user.hashed_password)
-      passChecked = bcrypt_context.verify(raw_data['password'], user.hashed_password)
-      print('PASSED CHECKED:', passChecked)
-
-      if passChecked is False:
-          return {"message": "password does not match"}
-    
-    # Set the user cookie Authenticated
-    response.set_cookie(key="user", value=str(user.username), httponly=True)
-
-    return {"message": "User signed in successfully"}
