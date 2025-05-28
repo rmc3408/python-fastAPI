@@ -43,7 +43,7 @@ class Task(Base):
     comment: Mapped["Comment"] = relationship(back_populates="task", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Task(id={self.id}, title={self.title}, completed={self.completed}, comment={self.comment})>"
+        return f"<Task(id={self.id}, title={self.title}, user_id={self.user_id}, completed={self.completed}, comment={self.comment})>"
 
 
 class Comment(Base):

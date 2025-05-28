@@ -5,6 +5,7 @@ from sqlalchemy.orm import joinedload, Session
 from typing import Optional, Annotated
 from ..models.task import Task
 from ..database import session
+from ..routers.auth import get_current_user, CurrentUser
 
 
 router = APIRouter()
@@ -17,13 +18,13 @@ def get_db():
         db.close()
 
 DB_Dependency = Annotated[Session, Depends(get_db)]
+User_Dependency = Annotated[CurrentUser, Depends(get_current_user)]  # Placeholder for user ID dependency
 
 class TaskCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=50)
     description: Optional[str] = Field(default=None, max_length=50)
     priority: int = Field(gt=0, le=5, description="Priority must be between 1 and 5")
-    user_id: int = Field(frozen=True)
-
+    user_id: Optional[int] = None
 
 class TaskCreateResponse(TaskCreateRequest):
     id: int
@@ -39,13 +40,16 @@ class TaskUpdateRequest(BaseModel):
 
 
 @router.post("/tasks", response_model=TaskCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_task(body: TaskCreateRequest, db: DB_Dependency):
+async def create_task(user: User_Dependency, body: TaskCreateRequest, db: DB_Dependency):
+    
     raw_data = body.model_dump()
+    from_bearer = user.model_dump().get('from_bearer')
+
     new_task = Task(
         title=raw_data['title'],
         description=raw_data['description'],
         priority=raw_data['priority'],
-        user_id=raw_data['user_id'],
+        user_id=from_bearer.get('id') if from_bearer is not None else 0,
         completed=False
     )
     db.add(new_task)
