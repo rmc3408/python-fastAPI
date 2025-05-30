@@ -5,7 +5,7 @@ from sqlalchemy import select
 from ..database import session
 from sqlalchemy.orm import Session, joinedload
 from typing import Annotated, Optional
-from ..models.entity import RoleUser, User
+from ..models.entity import RoleUser, Task, User
 from pydantic import BaseModel, Field, EmailStr
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -123,7 +123,7 @@ def signin(db: DB_Dependency, response: Response, form_data: Annotated[OAuth2Pas
 
 @router.get("/users")
 def read_all_users(db: DB_Dependency):
-  result = db.query(User).all()
+  result = db.query(User).options(joinedload(User.tasks)).all()
   return result
 
 
