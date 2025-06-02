@@ -1,6 +1,6 @@
-from .utils import *
+from .setup import *
 from ..routers.auth import get_db, authenticate_user, create_access_token, SECRET_KEY, ALGORITHM, get_current_user
-from jose import jwt
+import jwt
 from datetime import timedelta
 import pytest
 from fastapi import HTTPException
@@ -12,6 +12,7 @@ def test_authenticate_user(test_user):
 
     authenticated_user = authenticate_user(test_user.username, 'testpassword', db)
     assert authenticated_user is not None
+    assert authenticated_user is not False
     assert authenticated_user.username == test_user.username
 
     non_existent_user = authenticate_user('WrongUserName', 'testpassword', db)
@@ -56,10 +57,4 @@ async def test_get_current_user_missing_payload():
 
     assert excinfo.value.status_code == 401
     assert excinfo.value.detail == 'Could not validate user.'
-
-
-
-
-
-
 
